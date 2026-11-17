@@ -1,0 +1,8 @@
+.git
+.venv
+context/
+logs/
+respostas/
+*.db
+instance/
+__pycache__/

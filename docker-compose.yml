@@ -6,50 +6,50 @@ services:
     # Configuração para construção da imagem Docker
     build:
       context: .  # Diretório utilizado como contexto de construção (o atual)
-      dockerfile: # Nome do arquivo responsável pela construção da imagem
+      dockerfile: Dockerfile # Nome do arquivo responsável pela construção da imagem
 
     # Define um nome personalizado para o container
-    container_name:
+    container_name: carnivorous-garden
 
     # Configura o mapeamento de portas entre host e container
     ports:
-      -
+      - "5005:5005"
 
     # Compartilha arquivos entre a máquina host e o container
     # A aplicação deverá disponibilizar seus logs para o Alloy através da pasta logs/app.log
     volumes:
-      -
+      - ./logs:/app/logs
 
     # Conecta o serviço à rede interna da infraestrutura
     networks:
       - loki
 
     # Define a política de reinicialização do container
-    restart: 
+    restart: unless-stopped
 
 
   # Serviço responsável pela coleta e encaminhamento dos logs
   alloy:
 
     # Imagem oficial do Grafana Alloy
-    image:
+    image: grafana/alloy:latest
 
     # Disponibiliza a interface web de gerenciamento do Alloy
     ports:
-      -
+      - "12345:12345"
 
     # Compartilha o arquivo de configuração e os logs da aplicação
     volumes:
-      -
-      -
+      - ./alloy-config.alloy:/etc/alloy/config.alloy
+      - ./logs:/tmp/app-logs
 
     # Define o comando de inicialização e o caminho do arquivo de configuração
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
 
     # Define os serviços que precisam ser iniciados antes do Alloy
     depends_on:
-      -
-      -
+      - carnivorous-garden
+      - loki
 
     networks:
       - loki
@@ -59,15 +59,15 @@ services:
   loki:
 
     # Imagem oficial do Grafana Loki
-    image:
+    image: grafana/loki:latest
 
     # Disponibiliza a API HTTP do Loki
     ports:
-      -
+      - "3100:3100"
 
     # Compartilha o arquivo de configuração e os dados armazenados
     volumes:
-      -
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
 
     # Define o arquivo de configuração utilizado pelo Loki
     command: -config.file=/etc/loki/local-config.yaml
@@ -80,7 +80,7 @@ services:
   grafana:
 
     # Imagem oficial do Grafana
-    image:
+    image: grafana/grafana:latest
 
     # Configurações de autenticação e acesso
     environment:
@@ -95,12 +95,31 @@ services:
 
     # Disponibiliza a interface web do Grafana
     ports:
-      -
+      - "3000:3000"
 
     # Configurar o provisionamento automático da fonte de dados Loki.
     # Pesquise como utilizar entrypoint, Shell e heredoc (EOF)
     # para criar o arquivo de configuração automaticamente.
     entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+          - name: Loki
+            type: loki
+            uid: loki
+            access: proxy
+            orgId: 1
+            url: http://loki:3100
+            basicAuth: false
+            isDefault: true
+            version: 1
+            editable: false
+        EOF
+        /run.sh
 
     networks:
       - loki
