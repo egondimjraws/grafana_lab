@@ -108,7 +108,7 @@ Verificação de cada serviço:
 | App Python (porta 5005) | `curl -w "%{http_code}" localhost:5005` | `200` |
 | Grafana (porta 3000) | `curl localhost:3000/api/health` | `200` |
 | Alloy (porta 12345) | `curl localhost:12345/-/ready` | `200` |
-| Loki (porta 3100) | `curl localhost:3100/ready` | `ready` (após ~15 s de aquecimento do ingester) |
+| Loki (porta 3100) | `curl -G localhost:3100/loki/api/v1/query --data-urlencode 'query=sum(count_over_time({filename="/tmp/app-logs/app.log"}[1h]))'` | `"status":"success"` com a contagem de linhas (ver observação sobre `/ready` abaixo) |
 | Datasource Loki no Grafana | `curl localhost:3000/api/datasources/uid/loki/health` | `{"message":"Data source successfully connected.","status":"OK"}` |
 | Logs chegando no Loki via Grafana | `.../proxy/uid/loki/loki/api/v1/labels` | `["filename","level","service_name"]` |
 
@@ -186,5 +186,6 @@ Os números batem com a contagem direta no arquivo `logs/app.log`. As 3 linhas s
 ## 5. Observações
 
 - Cada requisição aparece **3 vezes** como `path=... method=... status=...` no log. Isso acontece porque o `app.py` define três funções `log_response` com `@app.after_request`, e o Flask registra as três. Não afeta a coleta, mas infla a contagem de INFO.
+- O endpoint `localhost:3100/ready` do Loki continua respondendo `Pattern Ingester not ready: waiting for 15s after being ready`, mesmo com o serviço em execução há vários minutos. Isso vem do `pattern_ingester` habilitado no `loki-config.yaml`, um componente opcional (detecção de padrões). Ingestão e consultas funcionam normalmente, como mostram as consultas da seção 4. Por isso a verificação do Loki foi feita com uma consulta à API, e não pelo `/ready`.
 - As imagens usam a tag `latest`, como no README. Para tornar o ambiente reproduzível, o ideal seria fixar as versões.
 - O Grafana com acesso anônimo de administrador e o `SECRET_KEY` fixo no código servem só para o laboratório local.
