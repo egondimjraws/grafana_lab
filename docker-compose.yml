@@ -32,7 +32,7 @@ services:
   alloy:
 
     # Imagem oficial do Grafana Alloy
-    image: grafana/alloy:latest
+    image: grafana/alloy:v1.22.0
 
     # Disponibiliza a interface web de gerenciamento do Alloy
     ports:
@@ -59,7 +59,7 @@ services:
   loki:
 
     # Imagem oficial do Grafana Loki
-    image: grafana/loki:latest
+    image: grafana/loki:3.7.10
 
     # Disponibiliza a API HTTP do Loki
     ports:
@@ -80,7 +80,7 @@ services:
   grafana:
 
     # Imagem oficial do Grafana
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.3.1
 
     # Configurações de autenticação e acesso
     environment:

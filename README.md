@@ -55,6 +55,16 @@ O `docker-compose.yml` define quatro serviços:
 
 Os serviços compartilham a rede Docker `loki`. O Alloy lê o arquivo `logs/app.log`, encaminha os registros para o Loki e o Grafana utiliza o Loki como fonte de dados.
 
+## Versões das imagens
+
+As imagens foram fixadas nas versões testadas, para que o ambiente seja reproduzível:
+
+| Serviço | Imagem |
+|---|---|
+| Grafana Alloy | `grafana/alloy:v1.22.0` |
+| Grafana Loki | `grafana/loki:3.7.10` |
+| Grafana | `grafana/grafana:13.3.1` |
+
 ## Pré-requisitos
 
 Para executar o ambiente completo, instale:
@@ -68,7 +78,7 @@ Confira a instalação:
 
 ```powershell
 docker version
-docker-compose version
+docker compose version
 ```
 
 O comando `docker version` deve apresentar informações tanto do Client quanto do Server.
@@ -138,7 +148,8 @@ No Grafana:
 1. Acesse http://localhost:3000.
 2. Abra a área **Explore**.
 3. Selecione a fonte de dados **Loki**.
-4. Execute uma consulta, por exemplo:
+4. Alterne do modo **Builder** para **Code**.
+5. Execute uma consulta, por exemplo:
 
 ```logql
 {filename="/tmp/app-logs/app.log"}
@@ -152,9 +163,11 @@ Para consultar erros:
 
 A configuração do Alloy extrai o nível de log a partir do formato dos registros da aplicação e o utiliza como label `level`. A disponibilidade das consultas depende de o Alloy estar coletando os registros e de o Loki estar recebendo os dados.
 
+Se nada aparecer, ajuste o intervalo de tempo (por exemplo, **Last 15 minutes**) e gere eventos na aplicação.
+
 ## Modo de falhas
 
-A aplicação possui um mecanismo de falhas aleatórias que pode ser ativado pela interface. Ele permite gerar registros de erro e observar o fluxo de coleta e visualização:
+A aplicação possui um mecanismo de falhas aleatórias que pode ser ativado pela interface, na caixa **Alternar Modo de Erro**. Ele permite gerar registros de erro e observar o fluxo de coleta e visualização:
 
 ```text
 Aplicação Flask
@@ -185,10 +198,13 @@ Use esse recurso para testar a consulta de logs e acompanhar eventos de erro no 
 | Listar containers | `docker compose ps` |
 | Exibir logs | `docker compose logs -f` |
 | Exibir logs de um serviço | `docker compose logs -f alloy` |
+| Validar o arquivo Compose | `docker compose config` |
 | Parar e remover containers e rede | `docker compose down` |
 | Reconstruir sem cache | `docker compose build --no-cache` |
 
 Para remover também os volumes nomeados declarados no Compose, seria necessário utilizar `docker compose down -v`. Isso não substitui a remoção de arquivos armazenados em diretórios locais montados como bind mounts.
+
+## Solução de problemas
 
 ### Aplicação não abre no navegador
 
@@ -201,12 +217,26 @@ docker compose logs carnivorous-garden
 
 Verifique se a porta 5005 está disponível no Windows.
 
+### Erro "no configuration file provided: not found"
+
+O comando `docker compose` foi executado fora da pasta do projeto. Entre na pasta com `cd grafana_lab` e execute o comando novamente.
+
+### Erro "must be a string" ou "must be a number"
+
+Há campos vazios ou mal formatados no `docker-compose.yml` (por exemplo, `dockerfile:`, `ports: -` ou `image:`). Preencha todos os campos e valide com `docker compose config` antes de subir.
+
+### Nenhum log aparece no Grafana
+
+- Confira se o Alloy está rodando: `docker compose logs alloy`.
+- Confirme que o caminho do volume de logs coincide com o usado na consulta do Explore.
+- Gere eventos na aplicação (cadastre plantas, ative o modo de falhas) e ajuste o intervalo de tempo.
+
 ## Pontos de atenção
 
 - O SQLite é configurado pela aplicação, mas o Compose atual não declara um volume persistente específico para o banco. A persistência dos dados do banco entre a recriação dos containers não deve ser presumida.
 - A chave de sessão está definida diretamente no código (`SECRET_KEY`). Antes de utilizar o projeto fora de um laboratório, mova esse segredo para uma variável de ambiente.
 - O Grafana está configurado com acesso anônimo de administrador. Não exponha essa configuração em redes públicas.
-- As imagens dos serviços utilizam a tag `latest`. Para reproduzir o ambiente com maior previsibilidade, fixe versões específicas das imagens.
+- As imagens do Alloy, Loki e Grafana estão fixadas em versões específicas (ver seção "Versões das imagens"). Ao atualizá-las, teste o ambiente completo.
 - O projeto é uma demonstração educacional; não deve ser considerado uma configuração pronta para produção.
 
 ## Contribuição
@@ -216,4 +246,3 @@ Verifique se a porta 5005 está disponível no Windows.
 3. Implemente e teste a mudança.
 4. Envie um commit com uma mensagem descritiva.
 5. Abra um Pull Request.
-
